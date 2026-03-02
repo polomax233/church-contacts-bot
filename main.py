@@ -1,23 +1,22 @@
-python
 import telebot
 import pandas as pd
 
-# ВАЖНО: Вместо цифр ниже вставь свой токен от @BotFather (внутри кавычек)
-TOKEN = 'ТУТ_ТВОЙ_ТОКЕН_ОТ_BOTFATHER'
+# ВАЖНО: Вставь свой токен от @BotFather вместо цифр ниже (внутри кавычек)
+TOKEN = 'ТВОЙ_ТОКЕН_ЗДЕСЬ'
 bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     try:
-        # Читаем твой Excel (файл должен называться database.xlsx)
-        # Мы говорим боту, что заголовков нет, используем колонки 0, 1, 2, 3
+        # Читаем Excel (файл должен называться database.xlsx)
         df = pd.read_excel('database.xlsx', header=None)
         
+        # Берем сообщение пользователя и убираем лишние пробелы
         query = message.text.strip().lower()
         
-        # Ищем город в первой колонке (индекс 0)
-        # Сделаем поиск по всей строке на всякий случай
-        mask = df[0].astype(str).str.lower().contains(query, na=False)
+        # Умный поиск: ищем в первой колонке (индекс 0) совпадение по буквам
+        # Бот найдет и "Киев" и "Київ", так как ищет часть слова
+        mask = df[0].astype(str).str.lower().str.contains(query, na=False)
         result = df[mask]
         
         if not result.empty:
@@ -27,19 +26,26 @@ def handle_message(message):
                 address = str(row[2]) # Адрес
                 info = str(row[3])    # Пастор и телефон
                 
-                # Логика: Киев и область — всё. Одесса/Харьков — только инфо.
-                if 'киев' in query or 'київ' in query:
-                    response = f"⛪ {name}\n📍 {city}, {address}\n📞 {info}"
+                # ЛОГИКА ФИЛЬТРАЦИИ:
+                # Если в запросе есть Киев или область (на любом языке) — даем полный адрес
+                kiev_variants = ['київ', 'киев', 'область', 'обл']
+                if any(word in query for word in kiev_variants):
+                    response = (f"⛪ *{name}*\n"
+                                f"📍 {city}, {address}\n"
+                                f"📞 {info}")
                 else:
-                    # Для Одессы, Харькова и других — только телефон/пастор
-                    response = f"⛪ {name}\n📞 {info}"
+                    # Для всех остальных (Одесса, Харьков и т.д.) — БЕЗ адреса, только телефон
+                    response = (f"⛪ *{name}*\n"
+                                f"📞 {info}")
                 
-                bot.send_message(message.chat.id, response)
+                bot.send_message(message.chat.id, response, parse_mode="Markdown")
         else:
-            bot.send_message(message.chat.id, "По этому городу ничего не найдено. Попробуйте написать по-другому.")
+            bot.send_message(message.chat.id, "На жаль, за вашим запитом нічого не знайдено. Спробуйте інше місто.")
             
     except Exception as e:
         print(f"Ошибка: {e}")
-        bot.send_message(message.chat.id, "Произошла ошибка при поиске. Проверьте базу данных.")
+        bot.send_message(message.chat.id, "Виникла помилка при пошуку. Будь ласка, зверніться до адміністратора.")
 
+# Запуск
+print("Бот запущений та готовий до роботи!")
 bot.polling(none_stop=True)
