@@ -1,51 +1,48 @@
 import telebot
 import pandas as pd
+from flask import Flask
+from threading import Thread
 
-# ВАЖНО: Вставь свой токен от @BotFather вместо цифр ниже (внутри кавычек)
-TOKEN = '8668110299:AAGdwnbc6Ii3oJWLbQC-Gl6YUnV63u-M-oQ'
+# 1. МИНИ-СЕРВЕР ДЛЯ RENDER
+app = Flask('')
+@app.route('/')
+def home():
+    return "Бот працює!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+
+# 2. НАСТРОЙКИ БОТА
+TOKEN = 'ТВОЙ_ТОКЕН' # Проверь, чтобы тут был твой токен!
 bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     try:
-        # Читаем Excel (файл должен называться database.xlsx)
         df = pd.read_excel('database.xlsx', header=None)
-        
-        # Берем сообщение пользователя и убираем лишние пробелы
         query = message.text.strip().lower()
-        
-        # Умный поиск: ищем в первой колонке (индекс 0) совпадение по буквам
-        # Бот найдет и "Киев" и "Київ", так как ищет часть слова
-        mask = df[0].astype(str).str.lower().str.contains(query, na=False)
+        mask = df.astype(str).apply(lambda x: x.str.contains(query, case=False)).any(axis=1)
         result = df[mask]
         
         if not result.empty:
             for _, row in result.iterrows():
-                city = str(row[0])    # Город
-                name = str(row[1])    # Название церкви
-                address = str(row[2]) # Адрес
-                info = str(row[3])    # Пастор и телефон
-                
-                # ЛОГИКА ФИЛЬТРАЦИИ:
-                # Если в запросе есть Киев или область (на любом языке) — даем полный адрес
-                kiev_variants = ['київ', 'киев', 'область', 'обл']
-                if any(word in query for word in kiev_variants):
-                    response = (f"⛪ *{name}*\n"
-                                f"📍 {city}, {address}\n"
-                                f"📞 {info}")
+                city, name, address, info = str(row[0]), str(row[1]), str(row[2]), str(row[3])
+                if any(k in query for k in ['київ', 'киев', 'область']):
+                    text = f"⛪ *{name}*\n📍 {city}, {address}\n📞 {info}"
                 else:
-                    # Для всех остальных (Одесса, Харьков и т.д.) — БЕЗ адреса, только телефон
-                    response = (f"⛪ *{name}*\n"
-                                f"📞 {info}")
-                
-                bot.send_message(message.chat.id, response, parse_mode="Markdown")
+                    text = f"⛪ *{name}*\n📞 {info}"
+                bot.send_message(message.chat.id, text, parse_mode="Markdown")
         else:
-            bot.send_message(message.chat.id, "На жаль, за вашим запитом нічого не знайдено. Спробуйте інше місто.")
-            
+            bot.send_message(message.chat.id, "На жаль, нічого не знайдено.")
     except Exception as e:
         print(f"Ошибка: {e}")
-        bot.send_message(message.chat.id, "Виникла помилка при пошуку. Будь ласка, зверніться до адміністратора.")
 
-# Запуск
-print("Бот запущений та готовий до роботи!")
-bot.polling(none_stop=True)
+# ЗАПУСК
+if __name__ == "__main__":
+    keep_alive() # Запускаем мини-сервер для Render
+    print("Бот запущений!")
+    bot.polling(none_stop=True)
