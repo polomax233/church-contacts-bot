@@ -17,7 +17,7 @@ def keep_alive():
     t.start()
 
 # 2. НАСТРОЙКИ БОТА
-TOKEN = 'ТВОЙ_ТОКЕН' # Проверь, чтобы тут был твой токен!
+TOKEN = '8668110299:AAGdwnbc6Ii3oJWLbQC-Gl6YUnV63u-M-oQ' # Проверь, чтобы тут был твой токен!
 bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(func=lambda message: True)
