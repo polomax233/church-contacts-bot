@@ -2,7 +2,7 @@ import telebot
 import pandas as pd
 
 # ВАЖНО: Вставь свой токен от @BotFather вместо цифр ниже (внутри кавычек)
-TOKEN = 'ТВОЙ_ТОКЕН_ЗДЕСЬ'
+TOKEN = '8668110299:AAGdwnbc6Ii3oJWLbQC-Gl6YUnV63u-M-oQ'
 bot = telebot.TeleBot(TOKEN)
 
 @bot.message_handler(func=lambda message: True)
